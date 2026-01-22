@@ -4,7 +4,17 @@ module.exports = {
     content: ["./src/app/**/*.{js,jsx,ts,tsx}"],
     presets: [require("nativewind/preset")],
     theme: {
-      extend: {},
+      extend: {
+        fontFamily: {
+          "ozel":["victor-mono"],
+          "ozel-italic":["victor-mono-italic"],
+          "sans-code":["sans-code"],
+          "sans-code-italic":["sans-code-italic"],
+          "wenkai-mono-bold":["wenkai-mono-bold"],
+          "wenkai-mono-light":["wenkai-mono-light"],
+          "wenkai-mono-regular":["wenkai-mono-regular"],
+        },
+      },
     },
     plugins: [],
   }
