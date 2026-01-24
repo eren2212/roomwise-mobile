@@ -87,7 +87,7 @@ export default function OnboardingStep2() {
           </AppText>
           
           <TouchableOpacity
-            onPress={() => setShowDatePicker(true)}
+            onPress={() => setShowDatePicker(!showDatePicker )}
             className="bg-card border-2 border-quaternary rounded-2xl py-4 px-6"
             activeOpacity={0.7}
           >
@@ -107,6 +107,7 @@ export default function OnboardingStep2() {
               onChange={handleDateChange}
               maximumDate={new Date()}
               minimumDate={new Date(1950, 0, 1)}
+              locale="tr-TR"
             />
           )}
         </View>

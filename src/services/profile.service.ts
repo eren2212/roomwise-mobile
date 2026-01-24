@@ -23,7 +23,7 @@ class ProfileService {
   // Avatar yükle
   async uploadAvatar(file: File | Blob, token: string): Promise<ApiResponse<{ avatar_url: string }>> {
     const formData = new FormData();
-    formData.append('avatar', file as any);
+    formData.append('avatar', file );
 
     const response = await api.post('/profiles/me/avatar', formData, {
       headers: {

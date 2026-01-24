@@ -17,11 +17,9 @@ import { useAuthStore } from "@/stores/authStore";
 import authService from '@/services/auth.service';
 
 export default function SignUpScreen() {
-  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{
-    fullName?: string;
     email?: string;
     password?: string;
   }>({});
@@ -32,9 +30,7 @@ export default function SignUpScreen() {
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
     
-    if (!fullName.trim()) {
-      newErrors.fullName = 'Ad Soyad gereklidir';
-    }
+
 
     if (!email.trim()) {
       newErrors.email = 'E-posta gereklidir';
@@ -61,11 +57,8 @@ export default function SignUpScreen() {
     }
 
     try {
-      await register({
-        fullName,
-        email,
-        password,
-      });
+      await register({email,password});
+
 
       Alert.alert(
         'Başarılı!', 
@@ -73,12 +66,13 @@ export default function SignUpScreen() {
         [
           {
             text: 'Tamam',
-            onPress: () => router.push('/(protected)/(auth)/signin'),
+            onPress: () => router.push('/(auth)/signin'),
           }
         ]
       );
     } catch (err: any) {
       Alert.alert('Hata', err.message || 'Kayıt olurken bir hata oluştu');
+    } finally {
     }
   };
 
@@ -101,32 +95,6 @@ export default function SignUpScreen() {
             <AppText className="text-3xl font-bold text-tint text-center mb-8">
               Hesap Oluştur
             </AppText>
-
-            {/* Full Name Input */}
-            <View className="mb-4">
-              <AppText className="text-sm font-medium text-primary mb-2">
-                Ad Soyad
-              </AppText>
-              <Input
-                icon="person-outline"
-                placeholder="Adınız ve Soyadınız"
-                value={fullName}
-                onChangeText={(text) => {
-                  setFullName(text);
-                  if (errors.fullName) {
-                    setErrors({ ...errors, fullName: undefined });
-                  }
-                }}
-                error={errors.fullName}
-                autoCapitalize="words"
-              />
-              {errors.fullName && (
-                <AppText className="text-xs text-error mt-1 ml-1">
-                  {errors.fullName}
-                </AppText>
-              )}
-            </View>
-
             {/* University Email Input */}
             <View className="mb-4">
               <AppText className="text-sm font-medium text-primary mb-2">

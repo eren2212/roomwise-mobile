@@ -31,14 +31,23 @@ export function AvatarPicker({ avatarUrl, onAvatarSelect, loading = false }: Ava
     });
 
     if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
+      const asset = result.assets[0];
+      const uri = asset.uri;
       setLocalUri(uri);
       
-      // File objesi oluştur (fetch ile blob)
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      // ÖNEMLİ KISIM: Blob yerine bu objeyi oluşturuyoruz
+      // iOS bazen fileName'i null döndürür, o yüzden manuel isim veriyoruz.
+      const fileName = asset.fileName || uri.split('/').pop() || `avatar-${Date.now()}.jpg`;
+      const fileType = asset.mimeType || 'image/jpeg'; // Varsayılan tip
+
+      const fileToUpload = {
+        uri: uri,       // Dosyanın telefondaki yolu
+        name: fileName, // Backend bunu 'originalname' olarak görecek! (.jpg uzantısı burada önemli)
+        type: fileType, // Backend bunu 'mimetype' olarak görecek
+      };
       
-      onAvatarSelect(uri, blob);
+      // Artık blob değil, bu objeyi gönderiyoruz
+      onAvatarSelect(uri, fileToUpload);
     }
   };
 

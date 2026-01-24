@@ -1,6 +1,5 @@
 // Kayıt olma için gerekli veriler
 export interface RegisterDto {
-  fullName: string;
   email: string;
   password: string;
 }
@@ -15,7 +14,6 @@ export interface LoginDto {
 export interface User {
   id: string;
   email: string;
-  fullName?: string;
   created_at?: string;
 }
 

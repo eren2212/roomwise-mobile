@@ -35,13 +35,22 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         });
         throw new Error(response.error.message);
       }
-
+      console.log('response', response);
+      console.log('response.data.session', response.data.session);
+      console.log('response.data.user', response.data.user);
       if (response.data.session && response.data.user) {
         set({
           user: response.data.user,
           token: response.data.session.access_token,
           isAuthenticated: true,
           isLoading: false,
+          error: null,
+        });
+      }
+      else if (response.data.user && !response.data.session) {
+        set({
+          isLoading: false,
+          isAuthenticated: false,
           error: null,
         });
       }
