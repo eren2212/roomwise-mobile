@@ -42,6 +42,7 @@ interface ProfileState {
   
   // API Actions
   uploadAvatar: (file: File | Blob, token: string) => Promise<string>;
+  getAvatar: (token: string) => Promise<Buffer>;
   createProfile: (token: string) => Promise<void>;
   fetchProfile: (token: string) => Promise<void>;
   checkCompletion: (token: string) => Promise<any>;
@@ -120,6 +121,18 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     } catch (error: any) {
       const errorMessage = error.message || 'Avatar yüklenirken hata oluştu';
       set({ error: errorMessage, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Get avatar
+  getAvatar: async (token) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await profileService.getAvatar(token);
+      return response;
+    } catch (error: any) {
+      set({ error: error.message, isLoading: false });
       throw error;
     }
   },

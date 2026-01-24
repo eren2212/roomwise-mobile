@@ -33,6 +33,20 @@ class ProfileService {
     });
     return response.data;
   }
+  // Avatarı getir
+  async getAvatar(token: string): Promise<Buffer> {
+    const profile = await this.getMyProfile(token);
+    const filename = profile.data?.avatar_url;
+    if (!filename) {
+      throw new Error('Avatar bulunamadı');
+    }
+    const response = await api.get(`/profiles/me/avatar/${filename}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data.buffer;
+  }
 
   // Profili getir
   async getMyProfile(token: string): Promise<ApiResponse<Profile>> {

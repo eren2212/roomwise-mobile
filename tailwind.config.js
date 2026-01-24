@@ -19,6 +19,10 @@ module.exports = {
           tint: COLORS.tint,
           success: COLORS.success,
           error: COLORS.error,
+          linear1: COLORS.linear1,
+          linear2: COLORS.linear2,
+          radial1: COLORS.radial1,
+          radial2: COLORS.radial2,
         },
         fontFamily: {
           "ozel":["victor-mono"],
