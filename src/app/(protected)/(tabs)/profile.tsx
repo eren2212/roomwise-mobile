@@ -139,6 +139,28 @@ export default function ProfileScreen() {
 
                 {/* Menu Items */}
                 <View className="px-6">
+                    {/* Identity Verification - Only show if not verified */}
+                    {!profile?.is_verified && (
+                        <TouchableOpacity 
+                            className="flex-row items-center bg-tint rounded-2xl p-4 mb-3"
+                            activeOpacity={0.7}
+                            onPress={() => router.push('/(protected)/identity/intro')}
+                        >
+                            <View className="w-12 h-12 rounded-2xl bg-white/20 items-center justify-center mr-4">
+                                <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" />
+                            </View>
+                            <View className="flex-1">
+                                <AppText className="text-base font-bold text-white mb-1">
+                                    Kimliğini Doğrula
+                                </AppText>
+                                <AppText className="text-xs text-white/80">
+                                    Tüm özelliklere erişim için gerekli
+                                </AppText>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+                        </TouchableOpacity>
+                    )}
+
                     {/* Edit Profile */}
                     <TouchableOpacity 
                         className="flex-row items-center bg-card rounded-2xl p-4 mb-3"
