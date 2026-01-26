@@ -2,6 +2,7 @@ import api from './api';
 import {
   Profile,
   CreateProfileDto,
+  UpdateProfileDto,
   UpdatePreferencesDto,
   UserPreferences,
   QuestionCatalog,
@@ -51,6 +52,16 @@ class ProfileService {
   // Profili getir
   async getMyProfile(token: string): Promise<ApiResponse<Profile>> {
     const response = await api.get('/profiles/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
+  // Profili güncelle
+  async updateProfile(data: UpdateProfileDto, token: string): Promise<ApiResponse<Profile>> {
+    const response = await api.patch('/profiles/me', data, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

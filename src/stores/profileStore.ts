@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   Profile,
   CreateProfileDto,
+  UpdateProfileDto,
   UpdatePreferencesDto,
   UserPreferences,
   QuestionCatalog,
@@ -44,6 +45,7 @@ interface ProfileState {
   uploadAvatar: (file: File | Blob, token: string) => Promise<string>;
   getAvatar: (token: string) => Promise<Buffer>;
   createProfile: (token: string) => Promise<void>;
+  updateProfile: (data: UpdateProfileDto, token: string) => Promise<void>;
   fetchProfile: (token: string) => Promise<void>;
   checkCompletion: (token: string) => Promise<any>;
   fetchQuestions: (token: string) => Promise<void>;
@@ -108,8 +110,12 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       const response = await profileService.uploadAvatar(file, token);
       const avatarUrl = response.data.avatar_url;
       
-      // Form data'ya kaydet
+      // Profile ve Form data'ya kaydet
       set((state) => ({
+        profile: state.profile ? {
+          ...state.profile,
+          avatar_url: avatarUrl,
+        } : null,
         formData: {
           ...state.formData,
           avatar_url: avatarUrl,
@@ -174,6 +180,22 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       get().resetFormData();
     } catch (error: any) {
       const errorMessage = error.message || 'Profil oluşturulurken hata oluştu';
+      set({ error: errorMessage, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Update profile
+  updateProfile: async (data, token) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await profileService.updateProfile(data, token);
+      set({
+        profile: response.data,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      const errorMessage = error.message || 'Profil güncellenirken hata oluştu';
       set({ error: errorMessage, isLoading: false });
       throw error;
     }

@@ -20,13 +20,21 @@ export default function OnboardingStep2() {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
-
-    if (selectedDate) {
-      setTempDate(selectedDate);
-      const formattedDate = selectedDate.toISOString().split('T')[0];
-      setFormData('birth_date', formattedDate);
-    }
+  
+    if (!selectedDate) return;
+  
+    const fixedDate = new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate()
+    );
+  
+    const yyyyMMdd = fixedDate.toLocaleDateString('en-CA');
+  
+    setTempDate(fixedDate);
+    setFormData('birth_date', yyyyMMdd);
   };
+  
 
   const handleContinue = () => {
     if (!formData.birth_date) {

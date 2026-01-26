@@ -127,6 +127,16 @@ export interface CreateProfileDto {
   occupation?: string;
 }
 
+export interface UpdateProfileDto {
+  bio?: string;
+  birth_date?: string;
+  gender?: Gender;
+  occupation_status?: OccupationStatus;
+  university?: string;
+  department?: string;
+  occupation?: string;
+}
+
 export interface UpdatePreferencesDto {
   smoking?: Smoking;
   alcohol?: Alcohol;

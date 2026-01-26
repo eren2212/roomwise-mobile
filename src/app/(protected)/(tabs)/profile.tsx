@@ -165,10 +165,7 @@ export default function ProfileScreen() {
                     <TouchableOpacity 
                         className="flex-row items-center bg-card rounded-2xl p-4 mb-3"
                         activeOpacity={0.7}
-                        onPress={() => {
-                            // TODO: Navigate to edit profile
-                            console.log('Profili düzenle')
-                        }}
+                        onPress={() => router.push('/(protected)/edit-profile')}
                     >
                         <View className="w-12 h-12 rounded-2xl bg-linear1/10 items-center justify-center mr-4">
                             <Ionicons name="pencil" size={20} color={COLORS.tint} />
