@@ -118,6 +118,29 @@ class ProfileService {
     });
     return response.data;
   }
+
+  // Location güncelle (konum + tercih edilen ilçe)
+  async updateLocation(
+    districtText: string,
+    lat: number,
+    lon: number,
+    token: string
+  ): Promise<ApiResponse<Profile>> {
+    const response = await api.patch(
+      '/profiles/location',
+      {
+        preferred_district_text: districtText,
+        latitude: lat,
+        longitude: lon,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  }
 }
 
 export default new ProfileService();

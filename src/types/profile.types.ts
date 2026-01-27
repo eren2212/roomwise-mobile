@@ -76,6 +76,7 @@ export interface Profile {
   is_verified: boolean | null;
   verification_status: string | null;
   location: unknown | null;
+  preferred_district_text: string | null; // ← YENİ: Seçilen ilçe adı
   created_at: string | null;
   updated_at: string | null;
   has_seen_onboarding: boolean | null;
