@@ -38,6 +38,7 @@ export default function HomeScreen() {
     isFetching,
     selectedLocation,
     fetchPotentialMatches,
+    fetchDefaultLocation,
     swipeCard,
   } = useMatchingStore();
 
@@ -46,12 +47,21 @@ export default function HomeScreen() {
   const [rotate] = useState(new Animated.Value(0));
   const [showLocationModal, setShowLocationModal] = useState(false);
 
-  // Profil yükle
+  // Profil ve Lokasyon Yükleme
   useEffect(() => {
-    if (token && !profile) {
-      fetchProfile(token);
+    if (token) {
+      // 1. Profil yoksa profil çek
+      if (!profile) {
+        fetchProfile(token);
+      }
+
+      // 2. Konum seçili değilse default konumu çek (Bunu profil kontrolünden ayırdık!)
+      if (!selectedLocation) {
+        console.log("Default lokasyon çekiliyor..."); // Kontrol için log
+        fetchDefaultLocation(token);
+      }
     }
-  }, [token]);
+  }, [token]); // Dependency array'e 'token' yeterli
 
   // Doğrulama kontrolü
   const isVerified = profile?.verification_status === "verified";
@@ -161,10 +171,13 @@ export default function HomeScreen() {
             {/* Map/Location Icon */}
             <TouchableOpacity
               onPress={() => setShowLocationModal(true)}
-              className="bg-gray-100 rounded-full w-12 h-12 items-center justify-center"
+              className="bg-gray-100 flex-row gap-2 rounded-full w-32 h-12 items-center justify-center"
               activeOpacity={0.7}
             >
               <Feather name="map-pin" size={24} color="black" />
+              <AppText className="text-xs font-semibold">
+                {selectedLocation?.town}
+              </AppText>
             </TouchableOpacity>
 
             {/* Notification Icon */}
@@ -196,7 +209,7 @@ export default function HomeScreen() {
                 onPress={() => setShowLocationModal(false)}
                 className="absolute top-4 right-6 bg-gray-100 rounded-full w-10 h-10 items-center justify-center z-10"
               >
-                <AppText className="text-xl">✕</AppText>
+                <AntDesign name="close" size={24} color="black" />
               </TouchableOpacity>
 
               {/* Location Picker */}

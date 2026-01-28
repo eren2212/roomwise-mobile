@@ -10,6 +10,7 @@ import {
   City,
   District,
   DistrictDetail,
+  ProfileLocation,
 } from "../types/matching.types";
 
 interface MatchingState {
@@ -38,6 +39,7 @@ interface MatchingState {
 
   // Actions - Matching
   fetchPotentialMatches: (token: string) => Promise<void>;
+  fetchDefaultLocation: (token: string) => Promise<void>;
   swipeCard: (
     action: SwipeAction,
     userId: string,
@@ -151,6 +153,59 @@ export const useMatchingStore = create<MatchingState>((set, get) => ({
     } catch (error: any) {
       set({
         error: error.message || "Eşleşmeler yüklenemedi",
+        isFetching: false,
+      });
+    }
+  },
+
+  // --- YENİ VE DÜZELTİLMİŞ fetchDefaultLocation ---
+  fetchDefaultLocation: async (token: string) => {
+    // 1. Yükleniyor durumuna al
+    set({ isFetching: true, error: null });
+
+    try {
+      // Servisten gelen veri direkt objenin kendisi: { latitude, longitude, districtText }
+      // 'as ProfileLocation' veya 'any' diyerek TS'i rahatlatabilirsin servis tipin tam değilse.
+      const location = (await profileService.getLocation(token)) as any;
+
+      // Veri kontrolü (location.data YOK, direkt location var)
+      if (!location || !location.latitude || !location.longitude) {
+        set({
+          error:
+            "Profilinizde kayıtlı konum bulunamadı. Lütfen manuel seçim yapın.",
+          isFetching: false,
+        });
+        return;
+      }
+
+      console.log("Default konum bulundu:", location.districtText);
+
+      // 2. Bu koordinatlarla eşleşmeleri getir
+      const matches = await matchingService.getPotentialMatches(
+        location.latitude, // <-- .data yok, direkt erişiyoruz
+        location.longitude, // <-- .data yok, direkt erişiyoruz
+        50, // 50km radius
+        token,
+      );
+
+      // 3. State'i güncelle
+      set({
+        potentialMatches: matches,
+        currentIndex: 0,
+        isFetching: false,
+        // İstersen UI'da "Şu anki konum: Bozüyük" yazsın diye selectedLocation'ı da fake bir objeyle doldurabilirsin:
+        selectedLocation: {
+          lat: location.latitude,
+          lon: location.longitude,
+          town: location.districtText,
+          // id ve city eksik olduğu için burası type hatası verebilir,
+          // şimdilik sadece match getirmek yeterli.
+        } as any,
+      });
+    } catch (error: any) {
+      console.error("Default location error:", error);
+      set({
+        error: error.message || "Konum veya eşleşmeler alınamadı",
         isFetching: false,
       });
     }

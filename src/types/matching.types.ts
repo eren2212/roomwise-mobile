@@ -1,9 +1,9 @@
 // Matching Types
 
 export enum SwipeAction {
-  LIKE = 'like',
-  DISLIKE = 'dislike',
-  SUPERLIKE = 'superlike',
+  LIKE = "like",
+  DISLIKE = "dislike",
+  SUPERLIKE = "superlike",
 }
 
 // Potansiyel eşleşme adayı
@@ -74,4 +74,10 @@ export interface DistrictDetail {
   town: string;
   lat: number;
   lon: number;
+}
+
+export interface ProfileLocation {
+  latitude: number;
+  longitude: number;
+  districtText: string;
 }
