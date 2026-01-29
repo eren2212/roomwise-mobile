@@ -1,294 +1,243 @@
 import { create } from "zustand";
-import matchingService from "../services/matching.service";
-import locationService from "../services/location.service";
-import profileService from "../services/profile.service";
 import {
   PotentialMatch,
   SwipeAction,
-  SwipeDto,
-  Match,
+  SwipeResponse,
   City,
   District,
   DistrictDetail,
-  ProfileLocation,
 } from "../types/matching.types";
+import matchingService from "../services/matching.service";
+import profileService from "../services/profile.service";
+import locationService from "../services/location.service";
 
 interface MatchingState {
   // Data
-  potentialMatches: PotentialMatch[];
-  myMatches: Match[];
-  currentIndex: number;
-
-  // Location data
+  cards: PotentialMatch[];
   cities: City[];
   districts: District[];
+
+  // Current Location
   selectedCity: City | null;
   selectedDistrict: District | null;
-  selectedLocation: DistrictDetail | null;
+  currentLocation: {
+    lat: number;
+    lng: number;
+    districtText: string;
+  } | null;
 
-  // Loading & Error
+  // UI State
   isLoading: boolean;
-  isFetching: boolean;
+  isLoadingCities: boolean;
+  isLoadingDistricts: boolean;
+  isSwiping: boolean;
+  showLocationModal: boolean;
   error: string | null;
 
-  // Actions - Location
-  fetchCities: () => Promise<void>;
-  fetchDistricts: (id: number) => Promise<void>;
-  selectCity: (city: City) => void;
-  selectDistrict: (district: District, token?: string) => Promise<void>;
+  // Match Result
+  lastMatch: SwipeResponse | null;
 
-  // Actions - Matching
-  fetchPotentialMatches: (token: string) => Promise<void>;
-  fetchDefaultLocation: (token: string) => Promise<void>;
-  swipeCard: (
-    action: SwipeAction,
-    userId: string,
-    token: string,
-  ) => Promise<boolean>;
-  fetchMyMatches: (token: string) => Promise<void>;
-
-  // Helpers
-  nextCard: () => void;
-  removeCurrentCard: () => void;
-  resetMatches: () => void;
+  // Actions
+  setShowLocationModal: (show: boolean) => void;
+  setSelectedCity: (city: City | null) => void;
+  setSelectedDistrict: (district: District | null) => void;
   clearError: () => void;
+  removeTopCard: () => void;
+
+  // API Actions
+  loadInitialCards: (token: string) => Promise<void>;
+  fetchCardsWithLocation: (
+    lat: number,
+    lng: number,
+    token: string,
+  ) => Promise<void>;
+  searchWithNewLocation: (token: string) => Promise<void>;
+  swipe: (
+    userId: string,
+    action: SwipeAction,
+    token: string,
+  ) => Promise<SwipeResponse>;
+  fetchCities: () => Promise<void>;
+  fetchDistricts: (cityId: number) => Promise<void>;
 }
 
 export const useMatchingStore = create<MatchingState>((set, get) => ({
-  // Initial State
-  potentialMatches: [],
-  myMatches: [],
-  currentIndex: 0,
+  // Initial state
+  cards: [],
   cities: [],
   districts: [],
   selectedCity: null,
   selectedDistrict: null,
-  selectedLocation: null,
+  currentLocation: null,
   isLoading: false,
-  isFetching: false,
+  isLoadingCities: false,
+  isLoadingDistricts: false,
+  isSwiping: false,
+  showLocationModal: false,
   error: null,
+  lastMatch: null,
 
-  // Fetch cities
-  fetchCities: async () => {
+  // Simple setters
+  setShowLocationModal: (show) => set({ showLocationModal: show }),
+  setSelectedCity: (city) =>
+    set({ selectedCity: city, selectedDistrict: null, districts: [] }),
+  setSelectedDistrict: (district) => set({ selectedDistrict: district }),
+  clearError: () => set({ error: null }),
+  removeTopCard: () => set((state) => ({ cards: state.cards.slice(1) })),
+
+  // Load initial cards using user's saved location
+  loadInitialCards: async (token) => {
     set({ isLoading: true, error: null });
     try {
-      const cities = await locationService.getCities();
-      set({ cities, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
-    }
-  },
+      // First, get user's saved location
+      const locationResponse = await profileService.getLocation(token);
+      if (locationResponse) {
+        const { latitude, longitude, districtText } = locationResponse;
 
-  // Fetch districts
-  fetchDistricts: async (id: number) => {
-    set({ isLoading: true, error: null });
-    try {
-      const districts = await locationService.getDistricts(id);
-      set({ districts, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
-    }
-  },
+        set({
+          currentLocation: {
+            lat: latitude,
+            lng: longitude,
+            districtText: districtText || "",
+          },
+        });
 
-  // Select city
-  selectCity: (city: City) => {
-    set({ selectedCity: city, selectedDistrict: null, districts: [] });
-  },
-
-  // Select district and fetch coordinates + save to profile
-  selectDistrict: async (district: District, token?: string) => {
-    set({ isLoading: true, error: null, selectedDistrict: district });
-    try {
-      const districtDetail = await locationService.getDistrictDetail(
-        district._id,
-      );
-
-      // Profilde location'ı güncelle (opsiyonel - token varsa)
-      if (token) {
-        try {
-          await profileService.updateLocation(
-            districtDetail.town,
-            districtDetail.lat,
-            districtDetail.lon,
-            token,
-          );
-        } catch (updateError) {
-          console.warn("Location profilde güncellenemedi:", updateError);
-          // Devam et, critical değil
-        }
+        // Fetch cards with that location
+        const cards = await matchingService.getPotentialMatches(
+          latitude,
+          longitude,
+          50,
+          token,
+        );
+        set({ cards, isLoading: false });
+      } else {
+        // No location saved, show location selector
+        set({ isLoading: false, showLocationModal: true });
       }
-
-      set({
-        selectedLocation: districtDetail,
-        isLoading: false,
-      });
     } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+      // No location found, show location selector
+      set({ isLoading: false, showLocationModal: true });
     }
   },
 
-  // Fetch potential matches
-  fetchPotentialMatches: async (token: string) => {
-    const { selectedLocation } = get();
+  // Fetch cards with specific coordinates
+  fetchCardsWithLocation: async (lat, lng, token) => {
+    set({ isLoading: true, error: null });
+    try {
+      const cards = await matchingService.getPotentialMatches(
+        lat,
+        lng,
+        50,
+        token,
+      );
+      set({ cards, isLoading: false });
+    } catch (error: any) {
+      set({ error: error.message || "Kartlar yüklenemedi", isLoading: false });
+    }
+  },
 
-    if (!selectedLocation) {
-      set({ error: "Lütfen önce konum seçin" });
+  // Search with newly selected location (update + fetch)
+  searchWithNewLocation: async (token) => {
+    const { selectedCity, selectedDistrict } = get();
+
+    if (!selectedCity || !selectedDistrict) {
+      set({ error: "Lütfen şehir ve ilçe seçin" });
       return;
     }
 
-    set({ isFetching: true, error: null });
-    try {
-      const matches = await matchingService.getPotentialMatches(
-        selectedLocation.lat,
-        selectedLocation.lon,
-        50, // 50km radius
-        token,
-      );
-
-      set({
-        potentialMatches: matches,
-        currentIndex: 0,
-        isFetching: false,
-      });
-    } catch (error: any) {
-      set({
-        error: error.message || "Eşleşmeler yüklenemedi",
-        isFetching: false,
-      });
-    }
-  },
-
-  // --- YENİ VE DÜZELTİLMİŞ fetchDefaultLocation ---
-  fetchDefaultLocation: async (token: string) => {
-    // 1. Yükleniyor durumuna al
-    set({ isFetching: true, error: null });
-
-    try {
-      // Servisten gelen veri direkt objenin kendisi: { latitude, longitude, districtText }
-      // 'as ProfileLocation' veya 'any' diyerek TS'i rahatlatabilirsin servis tipin tam değilse.
-      const location = (await profileService.getLocation(token)) as any;
-
-      // Veri kontrolü (location.data YOK, direkt location var)
-      if (!location || !location.latitude || !location.longitude) {
-        set({
-          error:
-            "Profilinizde kayıtlı konum bulunamadı. Lütfen manuel seçim yapın.",
-          isFetching: false,
-        });
-        return;
-      }
-
-      console.log("Default konum bulundu:", location.districtText);
-
-      // 2. Bu koordinatlarla eşleşmeleri getir
-      const matches = await matchingService.getPotentialMatches(
-        location.latitude, // <-- .data yok, direkt erişiyoruz
-        location.longitude, // <-- .data yok, direkt erişiyoruz
-        50, // 50km radius
-        token,
-      );
-
-      // 3. State'i güncelle
-      set({
-        potentialMatches: matches,
-        currentIndex: 0,
-        isFetching: false,
-        // İstersen UI'da "Şu anki konum: Bozüyük" yazsın diye selectedLocation'ı da fake bir objeyle doldurabilirsin:
-        selectedLocation: {
-          lat: location.latitude,
-          lon: location.longitude,
-          town: location.districtText,
-          // id ve city eksik olduğu için burası type hatası verebilir,
-          // şimdilik sadece match getirmek yeterli.
-        } as any,
-      });
-    } catch (error: any) {
-      console.error("Default location error:", error);
-      set({
-        error: error.message || "Konum veya eşleşmeler alınamadı",
-        isFetching: false,
-      });
-    }
-  },
-
-  // Swipe card
-  swipeCard: async (action: SwipeAction, userId: string, token: string) => {
-    try {
-      const swipeDto: SwipeDto = {
-        swipedUserId: userId,
-        action,
-      };
-
-      const response = await matchingService.swipe(swipeDto, token);
-
-      // Swipe başarılı! Şimdi bu kartı array'den SİL
-      get().removeCurrentCard();
-
-      // Eşleşme olduysa true döndür
-      return response.isMatch;
-    } catch (error: any) {
-      // Duplicate swipe hatası gelirse de kartı sil (zaten swipe yapmışız demek)
-      if (
-        error.message?.includes("zaten swipe yaptın") ||
-        error.status === 400
-      ) {
-        get().removeCurrentCard();
-      }
-      set({ error: error.message });
-      return false;
-    }
-  },
-
-  // Fetch my matches
-  fetchMyMatches: async (token: string) => {
     set({ isLoading: true, error: null });
     try {
-      const matches = await matchingService.getMyMatches(token);
-      set({ myMatches: matches, isLoading: false });
+      // Get district coordinates
+      const districtDetail = await locationService.getDistrictDetail(
+        selectedDistrict._id,
+      );
+      const districtText = selectedDistrict.name;
+
+      // Update user's location in database
+      await profileService.updateLocation(
+        districtText,
+        districtDetail.lat,
+        districtDetail.lon,
+        token,
+      );
+
+      // Update local state
+      set({
+        currentLocation: {
+          lat: districtDetail.lat,
+          lng: districtDetail.lon,
+          districtText,
+        },
+        showLocationModal: false,
+      });
+
+      // Fetch cards with new location
+      const cards = await matchingService.getPotentialMatches(
+        districtDetail.lat,
+        districtDetail.lon,
+        50,
+        token,
+      );
+      set({ cards, isLoading: false });
     } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+      set({ error: error.message || "Konum güncellenemedi", isLoading: false });
     }
   },
 
-  // Next card (index artır)
-  nextCard: () => {
-    const { currentIndex, potentialMatches } = get();
-    if (currentIndex < potentialMatches.length - 1) {
-      set({ currentIndex: currentIndex + 1 });
+  // Swipe action
+  swipe: async (userId, action, token) => {
+    set({ isSwiping: true, error: null });
+    try {
+      const response = await matchingService.swipe(
+        { swipedUserId: userId, action },
+        token,
+      );
+
+      set({ lastMatch: response, isSwiping: false });
+
+      // Remove the swiped card from the stack
+      get().removeTopCard();
+
+      return response;
+    } catch (error: any) {
+      // If already swiped, just remove the card without showing error
+      if (error.response?.data?.message?.includes("zaten swipe")) {
+        get().removeTopCard();
+      } else {
+        set({
+          error: error.message || "Swipe işlemi başarısız",
+          isSwiping: false,
+        });
+      }
+      throw error;
     }
   },
 
-  // Remove current card (swipe yapıldıktan sonra kartı sil)
-  removeCurrentCard: () => {
-    const { potentialMatches, currentIndex } = get();
-
-    // Mevcut kartı array'den çıkar
-    const newMatches = potentialMatches.filter(
-      (_, index) => index !== currentIndex,
-    );
-
-    // Index'i düzelt (eğer son kartı sildiyse index'i azalt)
-    const newIndex =
-      currentIndex >= newMatches.length
-        ? Math.max(0, newMatches.length - 1)
-        : currentIndex;
-
-    set({
-      potentialMatches: newMatches,
-      currentIndex: newIndex,
-    });
+  // Fetch cities
+  fetchCities: async () => {
+    set({ isLoadingCities: true });
+    try {
+      const cities = await locationService.getCities();
+      set({ cities, isLoadingCities: false });
+    } catch (error: any) {
+      set({
+        error: error.message || "Şehirler yüklenemedi",
+        isLoadingCities: false,
+      });
+    }
   },
 
-  // Reset matches
-  resetMatches: () => {
-    set({
-      potentialMatches: [],
-      currentIndex: 0,
-    });
-  },
-
-  // Clear error
-  clearError: () => {
-    set({ error: null });
+  // Fetch districts for a city
+  fetchDistricts: async (cityId) => {
+    set({ isLoadingDistricts: true, districts: [] });
+    try {
+      const districts = await locationService.getDistricts(cityId);
+      set({ districts, isLoadingDistricts: false });
+    } catch (error: any) {
+      set({
+        error: error.message || "İlçeler yüklenemedi",
+        isLoadingDistricts: false,
+      });
+    }
   },
 }));

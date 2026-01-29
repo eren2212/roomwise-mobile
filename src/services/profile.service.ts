@@ -9,6 +9,7 @@ import {
   ProfileCompletionStatus,
   ApiResponse,
 } from "../types/profile.types";
+import { ProfileLocation } from "../types/matching.types";
 
 class ProfileService {
   // Profil oluştur (Tek seferde tüm bilgiler)
@@ -163,13 +164,15 @@ class ProfileService {
   }
 
   // Location getir
-  async getLocation(token: string): Promise<ApiResponse<Location>> {
+  async getLocation(
+    token: string,
+  ): Promise<ApiResponse<ProfileLocation | null>> {
     const response = await api.get("/profiles/location", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log("Location Başarılı");
+    console.log("Location Başarılı", response.data);
     return response.data;
   }
 }

@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
-import { View, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { AppText } from './AppText';
+import React, { useState } from "react";
+import {
+  View,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { AppText } from "./AppText";
+import COLORS from "@/theme/color";
 
 interface AvatarPickerProps {
   avatarUrl?: string;
@@ -10,21 +17,28 @@ interface AvatarPickerProps {
   loading?: boolean;
 }
 
-export function AvatarPicker({ avatarUrl, onAvatarSelect, loading = false }: AvatarPickerProps) {
+export function AvatarPicker({
+  avatarUrl,
+  onAvatarSelect,
+  loading = false,
+}: AvatarPickerProps) {
   const [localUri, setLocalUri] = useState<string | undefined>(avatarUrl);
 
   const pickImage = async () => {
     // İzin iste
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert('İzin Gerekli', 'Fotoğraf seçmek için galeri erişim izni gerekiyor.');
+
+    if (status !== "granted") {
+      Alert.alert(
+        "İzin Gerekli",
+        "Fotoğraf seçmek için galeri erişim izni gerekiyor.",
+      );
       return;
     }
 
     // Fotoğraf seç
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -34,18 +48,19 @@ export function AvatarPicker({ avatarUrl, onAvatarSelect, loading = false }: Ava
       const asset = result.assets[0];
       const uri = asset.uri;
       setLocalUri(uri);
-      
+
       // ÖNEMLİ KISIM: Blob yerine bu objeyi oluşturuyoruz
       // iOS bazen fileName'i null döndürür, o yüzden manuel isim veriyoruz.
-      const fileName = asset.fileName || uri.split('/').pop() || `avatar-${Date.now()}.jpg`;
-      const fileType = asset.mimeType || 'image/jpeg'; // Varsayılan tip
+      const fileName =
+        asset.fileName || uri.split("/").pop() || `avatar-${Date.now()}.jpg`;
+      const fileType = asset.mimeType || "image/jpeg"; // Varsayılan tip
 
       const fileToUpload = {
-        uri: uri,       // Dosyanın telefondaki yolu
+        uri: uri, // Dosyanın telefondaki yolu
         name: fileName, // Backend bunu 'originalname' olarak görecek! (.jpg uzantısı burada önemli)
         type: fileType, // Backend bunu 'mimetype' olarak görecek
       };
-      
+
       // Artık blob değil, bu objeyi gönderiyoruz
       onAvatarSelect(uri, fileToUpload);
     }
@@ -62,10 +77,10 @@ export function AvatarPicker({ avatarUrl, onAvatarSelect, loading = false }: Ava
         {/* Avatar Container */}
         <View className="w-32 h-32 rounded-full bg-card border-4 border-quaternary overflow-hidden items-center justify-center">
           {loading ? (
-            <ActivityIndicator size="large" color="#69F0AE" />
+            <ActivityIndicator size="large" color={COLORS.primary} />
           ) : localUri ? (
-            <Image 
-              source={{ uri: localUri }} 
+            <Image
+              source={{ uri: localUri }}
               className="w-full h-full"
               resizeMode="cover"
             />
@@ -80,9 +95,7 @@ export function AvatarPicker({ avatarUrl, onAvatarSelect, loading = false }: Ava
         </View>
       </TouchableOpacity>
 
-      <AppText className="text-sm text-secondary mt-3">
-        Fotoğraf Yükle
-      </AppText>
+      <AppText className="text-sm text-secondary mt-3">Fotoğraf Yükle</AppText>
     </View>
   );
 }

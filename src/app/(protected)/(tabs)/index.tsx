@@ -1,377 +1,165 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import {
   View,
+  Text,
   TouchableOpacity,
-  ActivityIndicator,
-  Dimensions,
+  SafeAreaView,
   Alert,
-  Animated,
-  Modal,
 } from "react-native";
-import { AppText } from "@/components/AppText";
+import { useFocusEffect } from "expo-router";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useMatchingStore } from "@/stores/matchingStore";
-import { VerificationBlocker } from "@/components/VerificationBlocker";
-import { LocationPicker } from "@/components/LocationPicker";
-import { SwipeCard } from "@/components/SwipeCard";
 import { SwipeAction } from "@/types/matching.types";
-import {
-  GestureHandlerRootView,
-  PanGestureHandler,
-} from "react-native-gesture-handler";
-import Feather from "@expo/vector-icons/Feather";
+import SwipeCardStack from "@/components/matching/SwipeCardStack";
+import ActionButtons from "@/components/matching/ActionButtons";
+import LocationSelector from "@/components/matching/LocationSelector";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Fontisto from "@expo/vector-icons/Fontisto";
-
-const { width } = Dimensions.get("window");
-const SWIPE_THRESHOLD = width * 0.3;
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { AppText } from "@/components/AppText";
+import ProfileService from "@/services/profile.service";
 
 export default function HomeScreen() {
   const { token } = useAuthStore();
-  const { profile, fetchProfile } = useProfileStore();
+  const { profile } = useProfileStore();
   const {
-    potentialMatches,
-    currentIndex,
-    isFetching,
-    selectedLocation,
-    fetchPotentialMatches,
-    fetchDefaultLocation,
-    swipeCard,
+    cards,
+    isLoading,
+    isSwiping,
+    showLocationModal,
+    currentLocation,
+    lastMatch,
+    loadInitialCards,
+    swipe,
+    setShowLocationModal,
+    searchWithNewLocation,
   } = useMatchingStore();
 
-  const [translateX] = useState(new Animated.Value(0));
-  const [translateY] = useState(new Animated.Value(0));
-  const [rotate] = useState(new Animated.Value(0));
-  const [showLocationModal, setShowLocationModal] = useState(false);
+  const swipeCardRef = useRef<{
+    swipeLeft: () => void;
+    swipeRight: () => void;
+  } | null>(null);
 
-  // Profil ve Lokasyon Yükleme
+  // Load cards on mount
   useEffect(() => {
+    console.log("🏠 [HOME] Component mounted");
     if (token) {
-      // 1. Profil yoksa profil çek
-      if (!profile) {
-        fetchProfile(token);
-      }
-
-      // 2. Konum seçili değilse default konumu çek (Bunu profil kontrolünden ayırdık!)
-      if (!selectedLocation) {
-        console.log("Default lokasyon çekiliyor..."); // Kontrol için log
-        fetchDefaultLocation(token);
-      }
+      console.log("🏠 [HOME] Token var, kartlar yükleniyor...");
+      loadInitialCards(token);
     }
-  }, [token]); // Dependency array'e 'token' yeterli
+  }, [token]);
 
-  // Doğrulama kontrolü
-  const isVerified = profile?.verification_status === "verified";
-
-  // Swipe animasyonu
-  const handleGesture = Animated.event(
-    [{ nativeEvent: { translationX: translateX, translationY: translateY } }],
-    { useNativeDriver: true },
+  // Reload cards when screen is focused (her tab'a girişte)
+  useFocusEffect(
+    useCallback(() => {
+      console.log("👁️ [HOME] Screen focused, kartlar yenileniyor...");
+      if (token) {
+        loadInitialCards(token);
+      }
+    }, [token]),
   );
 
-  const handleGestureEnd = async ({ nativeEvent }: any) => {
-    const { translationX, velocityX } = nativeEvent;
-
-    // Like (sağa)
-    if (translationX > SWIPE_THRESHOLD || velocityX > 500) {
-      animateSwipe(width * 1.5);
-      await performSwipe(SwipeAction.LIKE);
+  // Check for new matches
+  useEffect(() => {
+    if (lastMatch?.isMatch) {
+      Alert.alert(
+        "🎉 Eşleşme!",
+        "Yeni bir ev arkadaşı ile eşleştin! Sohbet başlatmak için eşleşmeler sekmesine git.",
+        [{ text: "Harika!", style: "default" }],
+      );
     }
-    // Dislike (sola)
-    else if (translationX < -SWIPE_THRESHOLD || velocityX < -500) {
-      animateSwipe(-width * 1.5);
-      await performSwipe(SwipeAction.DISLIKE);
-    }
-    // Geri dön
-    else {
-      Animated.spring(translateX, {
-        toValue: 0,
-        useNativeDriver: true,
-      }).start();
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-      }).start();
-    }
-  };
+  }, [lastMatch]);
 
-  const animateSwipe = (toValue: number) => {
-    Animated.parallel([
-      Animated.timing(translateX, {
-        toValue,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: -100,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      translateX.setValue(0);
-      translateY.setValue(0);
-    });
-  };
-
-  const performSwipe = async (action: SwipeAction) => {
+  const handleSwipe = async (userId: string, action: SwipeAction) => {
     if (!token) return;
-
-    const currentMatch = potentialMatches[currentIndex];
-    if (!currentMatch) return;
-
-    const isMatch = await swipeCard(action, currentMatch.id, token);
-
-    if (isMatch) {
-      Alert.alert("🎉 Eşleşme!", `${currentMatch.full_name} ile eşleştiniz!`);
+    try {
+      await swipe(userId, action, token);
+    } catch (error: any) {
+      // Silently handle already swiped errors
+      if (!error.response?.data?.message?.includes("zaten swipe")) {
+        console.error("Swipe error:", error);
+      }
     }
   };
 
-  const handleLocationSelected = async () => {
-    if (token) {
-      await fetchPotentialMatches(token);
-      setShowLocationModal(false);
-    }
+  const handleButtonSwipe = async (action: SwipeAction) => {
+    if (cards.length === 0 || !token) return;
+    const topCard = cards[0];
+    await handleSwipe(topCard.id, action);
   };
 
-  // Manuel butonlar
-  const handleManualSwipe = async (action: SwipeAction) => {
-    if (action === SwipeAction.LIKE) {
-      animateSwipe(width * 1.5);
-    } else {
-      animateSwipe(-width * 1.5);
-    }
-    await performSwipe(action);
+  const handleLocationSearch = async () => {
+    if (!token) return;
+    await searchWithNewLocation(token);
   };
 
-  // Doğrulanmamışsa blocker göster
-  if (!isVerified) {
-    return <VerificationBlocker />;
-  }
-
-  // Mevcut kart
-  const currentMatch = potentialMatches[currentIndex];
+  const firstName = profile?.full_name?.split(" ")[0] || "Kullanıcı";
 
   return (
-    <GestureHandlerRootView className="flex-1 bg-background">
-      <View className="flex-1">
-        {/* Header */}
-        <View className="bg-card pt-14 pb-4 px-6 flex-row justify-between items-center">
-          <View className="flex-1">
-            <AppText className="text-3xl font-bold mb-1">Keşfet</AppText>
-            <AppText className="text-sm text-gray-500">
-              Merhaba, {profile?.full_name?.split(" ")[0] || ""}
-            </AppText>
-          </View>
-
-          {/* Icons */}
-          <View className="flex-row gap-3">
-            {/* Map/Location Icon */}
-            <TouchableOpacity
-              onPress={() => setShowLocationModal(true)}
-              className="bg-gray-100 flex-row gap-2 rounded-full w-32 h-12 items-center justify-center"
-              activeOpacity={0.7}
-            >
-              <Feather name="map-pin" size={24} color="black" />
-              <AppText className="text-xs font-semibold">
-                {selectedLocation?.town}
-              </AppText>
-            </TouchableOpacity>
-
-            {/* Notification Icon */}
-            <TouchableOpacity
-              className="bg-gray-100 rounded-full w-12 h-12 items-center justify-center relative"
-              activeOpacity={0.7}
-            >
-              <Ionicons name="notifications-outline" size={24} color="black" />
-              {/* Red dot for notifications */}
-              <View className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
-            </TouchableOpacity>
-          </View>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      {/* Header */}
+      <View className="px-6 pt-4 pb-2 flex-row gap-2 items-center justify-between space-x-3">
+        {/* Sol Kısım: Karşılama Metni */}
+        <View className="flex-1">
+          <AppText className="text-2xl font-bold text-gray-900">Keşfet</AppText>
+          <AppText className="text-gray-500 text-xs" numberOfLines={1}>
+            Merhaba, {firstName}
+          </AppText>
         </View>
 
-        {/* Location Modal */}
-        <Modal
-          visible={showLocationModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowLocationModal(false)}
+        {/* Orta Kısım: Konum Barı (Daha kompakt) */}
+        <TouchableOpacity
+          onPress={() => setShowLocationModal(true)}
+          className="flex-[0.5] bg-card rounded-full px-3 py-2 flex-row items-center border border-black/10"
         >
-          <View className="flex-1 bg-black/50 justify-end">
-            <View
-              className="bg-white rounded-t-3xl pt-6 pb-8"
-              style={{ minHeight: "50%" }}
-            >
-              {/* Close Button */}
-              <TouchableOpacity
-                onPress={() => setShowLocationModal(false)}
-                className="absolute top-4 right-6 bg-gray-100 rounded-full w-10 h-10 items-center justify-center z-10"
-              >
-                <AntDesign name="close" size={24} color="black" />
-              </TouchableOpacity>
+          <FontAwesome name="map-pin" size={24} color="black" />
+          <AppText
+            className="flex-1 text-gray-700 font-medium text-xs ml-2"
+            numberOfLines={1}
+          >
+            {currentLocation?.districtText || "Konum seç..."}
+          </AppText>
+          <Ionicons name="chevron-forward" size={14} color="#9CA3AF" />
+        </TouchableOpacity>
 
-              {/* Location Picker */}
-              <LocationPicker
-                onLocationSelected={handleLocationSelected}
-                token={token || ""}
-              />
-            </View>
-          </View>
-        </Modal>
-
-        {/* Content */}
-        {isFetching ? (
-          <View className="flex-1 justify-center items-center">
-            <ActivityIndicator size="large" color="#2C0FBD" />
-            <AppText className="text-gray-600 mt-4">
-              Eşleşmeler yükleniyor...
-            </AppText>
-          </View>
-        ) : !selectedLocation ? (
-          <View className="flex-1 justify-center items-center px-8 ">
-            <View className="bg-white rounded-full w-32 h-32 items-center justify-center mb-6 shadow-lg">
-              <FontAwesome5 name="map-pin" size={24} color="black" />
-            </View>
-            <AppText className="text-2xl font-bold text-center mb-3">
-              Konum Seç
-            </AppText>
-            <AppText className="text-gray-500 text-center mb-6">
-              Bir şehir ve ilçe seçerek yakınınızdaki odanoktaları bulun
-            </AppText>
-            <TouchableOpacity
-              onPress={() => setShowLocationModal(true)}
-              className="bg-[#2C0FBD] rounded-full py-4 px-8"
-              activeOpacity={0.8}
-            >
-              <AppText className="text-white font-semibold">Konum Seç</AppText>
-            </TouchableOpacity>
-          </View>
-        ) : potentialMatches.length === 0 ? (
-          <View className="flex-1 justify-center items-center px-8">
-            <View className="bg-white rounded-full w-32 h-32 items-center justify-center mb-6 shadow-lg">
-              <AppText className="text-6xl">😔</AppText>
-            </View>
-            <AppText className="text-2xl font-bold text-center mb-3">
-              Hiç Bir Eşleşme Bulunamadı
-            </AppText>
-            <AppText className="text-gray-500 text-center mb-6">
-              Bu alanda hiç bir eşleşme bulunamadı. Farklı bir konum ile tekrar
-              deneyin!
-            </AppText>
-            <TouchableOpacity
-              onPress={() => setShowLocationModal(true)}
-              className="bg-[#2C0FBD] rounded-full py-4 px-8"
-              activeOpacity={0.8}
-            >
-              <AppText className="text-white font-semibold">
-                Konum Değiştir
-              </AppText>
-            </TouchableOpacity>
-          </View>
-        ) : currentIndex >= potentialMatches.length ? (
-          <View className="flex-1 justify-center items-center px-8 ">
-            <View className="bg-white rounded-full w-32 h-32 items-center justify-center mb-6 shadow-lg">
-              <AppText className="text-6xl">🎉</AppText>
-            </View>
-            <AppText className="text-2xl font-bold text-center mb-3">
-              Tüm Eşleşmeler Görüldü!
-            </AppText>
-            <AppText className="text-gray-500 text-center mb-6">
-              Bu alanda tüm eşleşmeleri gördünüz. Farklı bir konum ile yeni
-              eşleşmeler bulun
-            </AppText>
-            <TouchableOpacity
-              onPress={() => setShowLocationModal(true)}
-              className="bg-[#2C0FBD] rounded-full py-4 px-8"
-              activeOpacity={0.8}
-            >
-              <AppText className="text-white font-semibold">
-                Konum Değiştir
-              </AppText>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            {/* Card Stack */}
-            <View className="flex-1 items-center justify-center">
-              <PanGestureHandler
-                onGestureEvent={handleGesture}
-                onHandlerStateChange={handleGestureEnd}
-              >
-                <Animated.View
-                  style={{
-                    transform: [
-                      { translateX },
-                      { translateY },
-                      {
-                        rotate: translateX.interpolate({
-                          inputRange: [-width, width],
-                          outputRange: ["-30deg", "30deg"],
-                        }),
-                      },
-                    ],
-                  }}
-                >
-                  <SwipeCard match={currentMatch} />
-                </Animated.View>
-              </PanGestureHandler>
-            </View>
-
-            {/* Action Buttons */}
-            <View className="flex-row justify-center items-center pb-32 px-8 gap-6">
-              {/* Dislike */}
-              <TouchableOpacity
-                onPress={() => handleManualSwipe(SwipeAction.DISLIKE)}
-                className="bg-white rounded-full w-16 h-16 items-center justify-center shadow-xl"
-                style={{
-                  shadowColor: "#FF3B30",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 8,
-                  elevation: 8,
-                }}
-                activeOpacity={0.7}
-              >
-                <AntDesign name="close" size={24} color="black" />
-              </TouchableOpacity>
-
-              {/* Superlike */}
-              <TouchableOpacity
-                onPress={() => handleManualSwipe(SwipeAction.SUPERLIKE)}
-                className="bg-[#2C0FBD] rounded-full w-20 h-20 items-center justify-center shadow-xl"
-                style={{
-                  shadowColor: "#2C0FBD",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 10,
-                  elevation: 10,
-                }}
-                activeOpacity={0.7}
-              >
-                <Fontisto name="star" size={32} color="yellow" />
-              </TouchableOpacity>
-
-              {/* Like */}
-              <TouchableOpacity
-                onPress={() => handleManualSwipe(SwipeAction.LIKE)}
-                className="bg-white rounded-full w-16 h-16 items-center justify-center shadow-xl"
-                style={{
-                  shadowColor: "#00C853",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 8,
-                  elevation: 8,
-                }}
-                activeOpacity={0.7}
-              >
-                <AntDesign name="heart" size={24} color="black" />
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+        {/* Sağ Kısım: Bildirim Butonu */}
+        <TouchableOpacity
+          className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm border border-gray-50"
+          onPress={() => {
+            /* Open notifications */
+          }}
+        >
+          <Ionicons name="notifications-outline" size={22} color="black" />
+          {/* Küçük bir bildirim noktası (Opsiyonel) */}
+          <View className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+        </TouchableOpacity>
       </View>
-    </GestureHandlerRootView>
+
+      {/* Card Stack */}
+      <View className="flex-1">
+        <SwipeCardStack
+          cards={cards}
+          onSwipe={handleSwipe}
+          isLoading={isLoading}
+        />
+      </View>
+
+      {/* Action Buttons */}
+      {cards.length > 0 && (
+        <ActionButtons
+          onDislike={() => handleButtonSwipe(SwipeAction.DISLIKE)}
+          onSuperLike={() => handleButtonSwipe(SwipeAction.SUPERLIKE)}
+          onLike={() => handleButtonSwipe(SwipeAction.LIKE)}
+          disabled={isSwiping || isLoading}
+        />
+      )}
+
+      {/* Location Selector Modal */}
+      <LocationSelector
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onSearch={handleLocationSearch}
+      />
+    </SafeAreaView>
   );
 }
