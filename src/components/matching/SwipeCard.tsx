@@ -13,12 +13,13 @@ import Animated, {
 import { LinearGradient } from "expo-linear-gradient";
 import { PotentialMatch, SwipeAction } from "../../types/matching.types";
 import { AppText } from "../AppText";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { BlurView } from "expo-blur";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import COLORS from "@/theme/color";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
@@ -30,7 +31,7 @@ interface SwipeCardProps {
 }
 
 // Calculate age from birth_date
-const calculateAge = (birthDate: string | null): number | null => {
+const calculateAge = (birthDate: Date | null): number | null => {
   if (!birthDate) return null;
   const birth = new Date(birthDate);
   const today = new Date();
@@ -40,16 +41,6 @@ const calculateAge = (birthDate: string | null): number | null => {
     age--;
   }
   return age;
-};
-
-// Get lifestyle tags from preferences (placeholder - would need to fetch preferences)
-const getLifestyleTags = (card: PotentialMatch): string[] => {
-  const tags: string[] = [];
-  // These would ideally come from user preferences
-  // For now, using occupation_status as a tag
-  if (card.occupation_status === "student") tags.push("🎓 Öğrenci");
-  if (card.occupation_status === "professional") tags.push("💼 Çalışan");
-  return tags;
 };
 
 export default function SwipeCard({ card, onSwipe, isFirst }: SwipeCardProps) {
@@ -125,22 +116,32 @@ export default function SwipeCard({ card, onSwipe, isFirst }: SwipeCardProps) {
       Extrapolation.CLAMP,
     ),
   }));
-
-  const age = calculateAge(card.bio); // Note: bio is used as placeholder, should use birth_date
-  const tags = getLifestyleTags(card);
+  const getAcronym = (text: string | null) => {
+    if (!text) return "";
+    return text
+      .split(" ") // Boşluklardan ayır
+      .filter((word) => word) // Gereksiz boşlukları temizle
+      .map((word) => word[0]) // Her kelimenin ilk harfini al
+      .join("") // Birleştir
+      .toUpperCase(); // Hepsini büyük harf yap
+  };
+  const age = calculateAge(card.birth_date);
   const avatarUrl = card.avatar_url
-    ? `${process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.35:3000"}/profiles/avatar/${card.avatar_url}`
+    ? `${process.env.EXPO_PUBLIC_API_URL}/profiles/avatar/${card.avatar_url}`
     : null;
+
+  // Preferences'tan ilk 3-4 tanesini göster (kart çok kalabalık olmasın)
+  const displayPreferences = card.preferences?.slice(0, 4) || [];
 
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View
         style={[cardStyle]}
-        className={`absolute w-full ${isFirst ? "z-10" : "z-0"}`}
+        className={`absolute w-full ${isFirst ? "z-10" : "z-0"} `}
       >
         <View
-          className="mx-6 rounded-3xl overflow-hidden bg-white shadow-2xl"
-          style={{ height: SCREEN_HEIGHT * 0.55 }}
+          className="mx-12 rounded-3xl overflow-hidden bg-card shadow-lg border border-gray-200 "
+          style={{ height: SCREEN_HEIGHT * 0.7 }}
         >
           {/* Profile Image */}
           <View className="flex-1 relative">
@@ -187,51 +188,47 @@ export default function SwipeCard({ card, onSwipe, isFirst }: SwipeCardProps) {
             {/* Like Indicator */}
             <Animated.View
               style={likeOpacity}
-              className="absolute top-20 left-6 border-4 border-green-500 rounded-xl px-4 py-2 rotate-[-20deg]"
+              className="absolute top-20 left-6 bg-card rounded-xl px-4 py-2 rotate-[-20deg]"
             >
-              <Text className="text-green-500 text-2xl font-bold">BEĞEN</Text>
+              <Text className="text-success  text-2xl font-bold">BEĞEN</Text>
             </Animated.View>
 
             {/* Dislike Indicator */}
             <Animated.View
               style={dislikeOpacity}
-              className="absolute top-20 right-6 border-4 border-red-500 rounded-xl px-4 py-2 rotate-[20deg]"
+              className="absolute top-20 right-6 bg-card rounded-xl px-4 py-2 rotate-[20deg]"
             >
-              <Text className="text-red-500 text-2xl font-bold">GEÇÇ</Text>
+              <Text className="text-error text-2xl font-bold">GEÇ</Text>
             </Animated.View>
 
             {/* Name & Info */}
             <View className="absolute bottom-4 left-4 right-4">
-              <AppText className="text-white text-3xl font-bold">
-                {card.full_name || "İsimsiz"}
+              <Text className="text-white text-3xl font-bold">
+                {card.full_name ? card.full_name.split(" ")[0] : "İsimsiz"}
                 {age ? `, ${age}` : ""}
-              </AppText>
+              </Text>
               {(card.university || card.occupation) && (
                 <View className="flex-row items-center mt-1">
                   <AppText className="text-white/90 text-base">
                     {card.occupation_status === "student" ? (
                       <View className="flex-row items-center">
-                        <FontAwesome
-                          name="university"
-                          size={22}
-                          color="white"
-                        />
-                        <View className="flex-col items-start">
-                          <AppText className="text-white/90 text-base ml-2 p-2">
-                            {card.university || ""}{" "}
+                        <Ionicons name="school" size={24} color="white" />
+                        <View className="flex-row items-center">
+                          <AppText className="text-white text-2xl ml p-2">
+                            {getAcronym(card.university)}@
                           </AppText>
-                          <AppText className="text-white/90 text-base ml-2 p-2">
-                            {card.department || ""}
+                          <AppText className="text-white text-2xl">
+                            {getAcronym(card.department)}
                           </AppText>
                         </View>
                       </View>
                     ) : (
-                      <>
+                      <View className="flex-row items-center">
                         <MaterialIcons name="work" size={16} color="white" />
                         <AppText className="text-white/90 text-base ml-2">
                           {card.occupation || ""}
                         </AppText>
-                      </>
+                      </View>
                     )}
                   </AppText>
                 </View>
@@ -239,46 +236,66 @@ export default function SwipeCard({ card, onSwipe, isFirst }: SwipeCardProps) {
             </View>
 
             {/* Info Button */}
-            <View className="absolute bottom-4 right-4 w-10 h-10 bg-gray-800/50 rounded-full items-center justify-center">
-              <Ionicons name="information" size={24} color="white" />
+            <View className="absolute bottom-4 right-4 w-12 h-12 bg-gray-800/20 rounded-full items-center justify-center">
+              <Ionicons
+                name="information-circle-sharp"
+                size={26}
+                color="white"
+              />
             </View>
           </View>
-        </View>
+          {/* Lifestyle Tags Section */}
+          <View className="mx-4 mt-1 rounded-2xl p-4 shadow-lg h-2/5">
+            <AppText className="text-gray-500 text-xs font-semibold mb-2 tracking-wider">
+              YAŞAM TARZI
+            </AppText>
 
-        {/* Lifestyle Tags Section */}
-        <View className="mx-4 mt-3 bg-white rounded-2xl p-4 shadow-lg">
-          <AppText className="text-gray-500 text-xs font-semibold mb-2 tracking-wider">
-            YAŞAM TARZI
-          </AppText>
-          <View className="flex-row flex-wrap gap-2">
-            {tags.length > 0 ? (
-              tags.map((tag, index) => (
-                <View
-                  key={index}
-                  className="bg-gray-100 rounded-full px-3 py-1.5"
-                >
-                  <AppText className="text-gray-700 text-sm">{tag}</AppText>
+            {/* Preferences from API */}
+            <View className="flex-row flex-wrap justify-around gap-2">
+              {displayPreferences.length > 0 ? (
+                displayPreferences.map((pref, index) => (
+                  <View
+                    key={index}
+                    className="bg-success/10 rounded-full px-3 py-2 flex-row items-center justify-center gap-1.5"
+                  >
+                    <FontAwesome6
+                      name={pref.icon}
+                      size={14}
+                      color={COLORS.success}
+                    />
+                    <AppText className=" text-sm font-medium">
+                      {pref.label}
+                    </AppText>
+                  </View>
+                ))
+              ) : (
+                <View className="bg-gray-100 rounded-full px-3 py-2 flex-row items-center gap-1.5">
+                  <MaterialCommunityIcons
+                    name="home"
+                    size={14}
+                    color="#6B7280"
+                  />
+                  <AppText className="text-gray-600 text-sm">
+                    Ev Arkadaşı Arıyor
+                  </AppText>
                 </View>
-              ))
-            ) : (
-              <View className="bg-indigo-50 rounded-full px-3 py-1.5">
-                <AppText className="text-indigo-600 text-sm">
-                  <FontAwesome name="home" size={24} color="black" /> Ev
-                  Arkadaşı Arıyor
+              )}
+            </View>
+
+            <View className="border-t border-gray-300 mt-4  h-1 "></View>
+
+            <View className="flex-row items-center justify-between mt-4">
+              <View className="flex-row items-center gap-1">
+                <MaterialIcons name="attach-money" size={24} color="black" />
+                <AppText className=" text-xl font-semibold tracking-wider p-2">
+                  Bütçe
                 </AppText>
               </View>
-            )}
+              <AppText className="text-xl font-semibold tracking-wider p-2">
+                12000 TL
+              </AppText>
+            </View>
           </View>
-
-          {/* Bio Preview */}
-          {card.bio && (
-            <AppText
-              className="text-gray-600 text-sm mt-3 leading-5"
-              numberOfLines={2}
-            >
-              {card.bio}
-            </AppText>
-          )}
         </View>
       </Animated.View>
     </GestureDetector>

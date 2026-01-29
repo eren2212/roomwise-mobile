@@ -50,14 +50,14 @@ export default function HomeScreen() {
   }, [token]);
 
   // Reload cards when screen is focused (her tab'a girişte)
-  useFocusEffect(
-    useCallback(() => {
-      console.log("👁️ [HOME] Screen focused, kartlar yenileniyor...");
-      if (token) {
-        loadInitialCards(token);
-      }
-    }, [token]),
-  );
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     console.log("👁️ [HOME] Screen focused, kartlar yenileniyor...");
+  //     if (token) {
+  //       loadInitialCards(token);
+  //     }
+  //   }, [token]),
+  // );
 
   // Check for new matches
   useEffect(() => {

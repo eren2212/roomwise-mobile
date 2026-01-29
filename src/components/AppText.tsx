@@ -12,7 +12,7 @@ export function AppText({ className, style, ...props }: AppTextProps) {
       // 2. text-light-primary: Light modda siyah
       // 3. dark:text-dark-primary: Dark modda beyaz
       // 4. ${className}: Dışarıdan ekstra stil (boyut, renk vs.) gelirse onu da ekler
-      className={`font-ozel text-secondary ${className}`}
+      className={`font-wenkai-mono-bold text-secondary ${className}`}
       style={style}
       {...props}
     />

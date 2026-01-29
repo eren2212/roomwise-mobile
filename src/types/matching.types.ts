@@ -6,17 +6,28 @@ export enum SwipeAction {
   SUPERLIKE = "superlike",
 }
 
+export interface UserPreferences {
+  key: string;
+  icon: string;
+  value: string;
+  label: string;
+}
+
 // Potansiyel eşleşme adayı
 export interface PotentialMatch {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
+  gender: string | null;
   bio: string | null;
+  trust_score: number | null;
   occupation: string | null;
+  birth_date: Date | null;
   university: string | null;
   department: string | null;
   occupation_status: string | null;
   match_score: number; // Backend'den gelen uyumluluk skoru (0-100)
+  preferences: UserPreferences[];
 }
 
 // Swipe DTO

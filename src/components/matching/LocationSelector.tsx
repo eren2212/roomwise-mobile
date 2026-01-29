@@ -98,7 +98,7 @@ export default function LocationSelector({
             <View className="bg-gray-50 rounded-xl mb-6">
               {isLoadingCities ? (
                 <View className="p-4 items-center">
-                  <ActivityIndicator size="large" color={COLORS.primary} />
+                  <ActivityIndicator size="small" color={COLORS.primary} />
                 </View>
               ) : (
                 <ScrollView
@@ -142,7 +142,7 @@ export default function LocationSelector({
                 </View>
               ) : isLoadingDistricts ? (
                 <View className="p-4 items-center justify-center h-[120px]">
-                  <ActivityIndicator size="large" color={COLORS.primary} />
+                  <ActivityIndicator size="small" color={COLORS.primary} />
                 </View>
               ) : (
                 <ScrollView

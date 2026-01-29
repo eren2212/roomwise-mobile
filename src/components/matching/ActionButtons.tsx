@@ -32,7 +32,7 @@ export default function ActionButtons({
       <TouchableOpacity
         onPress={onSuperLike}
         disabled={disabled}
-        className={`w-20 h-20 rounded-full bg-indigo-600 shadow-xl items-center justify-center ${disabled ? "opacity-50" : ""}`}
+        className={`w-56 h-20 rounded-full bg-linear1 shadow-xl items-center justify-center ${disabled ? "opacity-50" : ""}`}
         activeOpacity={0.7}
       >
         <MaterialCommunityIcons
@@ -40,7 +40,7 @@ export default function ActionButtons({
           size={24}
           color="orange"
         />
-        <Text className="text-white text-xs font-semibold mt-0.5">Hızlı</Text>
+        <Text className="text-white text-md font-semibold mt-0.5">Hızlı</Text>
       </TouchableOpacity>
 
       {/* Like Button */}
