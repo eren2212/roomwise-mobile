@@ -1,14 +1,14 @@
-import { View, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppText } from '@/components/AppText';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { Button } from '@/components/Button';
-import COLORS from '@/theme/color';
+import { View, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { AppText } from "@/components/AppText";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { Button } from "@/components/Button";
+import COLORS from "@/theme/color";
 
 export default function VerifyIdentityIntro() {
   const handleStartVerification = () => {
-    router.push('/(protected)/identity/scan-id');
+    router.push("/(protected)/identity/scan-id");
   };
 
   const handleGoBack = () => {
@@ -74,7 +74,11 @@ export default function VerifyIdentityIntro() {
               <View className="flex-row items-start">
                 {/* Icon Container */}
                 <View className="w-14 h-14 rounded-2xl bg-linear1/10 items-center justify-center mr-4">
-                  <Ionicons name="person-outline" size={28} color={COLORS.linear1} />
+                  <Ionicons
+                    name="person-outline"
+                    size={28}
+                    color={COLORS.linear1}
+                  />
                 </View>
 
                 {/* Step Content */}
@@ -103,7 +107,7 @@ export default function VerifyIdentityIntro() {
 
           {/* Start Button */}
           <Button
-            title="Start Verification"
+            title="Başlayın"
             onPress={handleStartVerification}
             variant="primary"
           />

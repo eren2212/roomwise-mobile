@@ -12,6 +12,7 @@ import { AppText } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { useHouseStore } from "@/stores/houseStore";
+import { useRequestStore } from "@/stores/requestStore";
 
 // Mock data - Split Bills
 const MOCK_BILLS = [
@@ -42,18 +43,20 @@ const MOCK_ROOMMATES = [
 export default function HomeScreen() {
   const { token } = useAuthStore();
   const { myHouse, fetchMyHouse, isLoading } = useHouseStore();
+  const { pendingCount, fetchPendingCount } = useRequestStore();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (token) {
       fetchMyHouse(token);
+      fetchPendingCount(token);
     }
   }, [token]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     if (token) {
-      await fetchMyHouse(token);
+      await Promise.all([fetchMyHouse(token), fetchPendingCount(token)]);
     }
     setRefreshing(false);
   };
@@ -111,12 +114,23 @@ export default function HomeScreen() {
             >
               <Ionicons name="settings-outline" size={22} color="#12121E" />
             </TouchableOpacity>
-            <TouchableOpacity className="w-10 h-10 bg-card rounded-full items-center justify-center">
+            <TouchableOpacity
+              onPress={() => router.push("/(protected)/notifications")}
+              className="w-10 h-10 bg-card rounded-full items-center justify-center relative"
+            >
               <Ionicons
                 name="notifications-outline"
                 size={22}
                 color="#12121E"
               />
+              {/* Badge */}
+              {pendingCount > 0 && (
+                <View className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-error rounded-full items-center justify-center px-1">
+                  <AppText className="text-white text-xs font-bold">
+                    {pendingCount > 99 ? "99+" : pendingCount}
+                  </AppText>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>

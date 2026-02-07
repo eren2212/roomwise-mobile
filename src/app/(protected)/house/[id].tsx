@@ -1,18 +1,20 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "@/components/AppText";
 import { Button } from "@/components/Button";
-import { ImageCarousel } from "@/components/house";
+import { ImageCarousel, RequestModal } from "@/components/house";
 import { useHouseStore } from "@/stores/houseStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useRequestStore } from "@/stores/requestStore";
 import houseService from "@/services/house.service";
 import { HOUSE_RULES, AMENITIES } from "@/types/house.types";
 import COLORS from "@/theme/color";
@@ -21,6 +23,8 @@ export default function HouseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token, user } = useAuthStore();
   const { selectedHouse, fetchHouseById, isLoading } = useHouseStore();
+  const { sendRequest, isLoading: isRequestLoading } = useRequestStore();
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -44,6 +48,27 @@ export default function HouseDetailScreen() {
     HOUSE_RULES.find((r) => r.id === ruleId);
   const getAmenityInfo = (amenityId: string) =>
     AMENITIES.find((a) => a.id === amenityId);
+
+  // İstek gönder
+  const handleSendRequest = async (message: string) => {
+    if (!token || !id) return;
+
+    try {
+      await sendRequest(id, message, token);
+      setShowRequestModal(false);
+      Alert.alert(
+        "Başarılı",
+        "İsteğiniz başarıyla gönderildi. Ev sahibi yanıtını bekliyorsunuz.",
+        [{ text: "Tamam" }],
+      );
+    } catch (error: any) {
+      Alert.alert(
+        "Hata",
+        error.response?.data?.message || "İstek gönderilemedi",
+        [{ text: "Tamam" }],
+      );
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["bottom"]}>
@@ -222,14 +247,22 @@ export default function HouseDetailScreen() {
       {!isOwner && (
         <View className="px-4 py-4 border-t border-quaternary bg-background">
           <Button
-            title="İletişime Geç"
-            onPress={() => {
-              // TODO: Chat başlatma işlemi
-            }}
+            title="İstek Gönder"
+            onPress={() => setShowRequestModal(true)}
             icon="send"
           />
         </View>
       )}
+
+      {/* Request Modal */}
+      <RequestModal
+        visible={showRequestModal}
+        onClose={() => setShowRequestModal(false)}
+        onSubmit={handleSendRequest}
+        ownerName="Ev Sahibi"
+        matchPercentage={94}
+        isLoading={isRequestLoading}
+      />
     </SafeAreaView>
   );
 }
