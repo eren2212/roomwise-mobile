@@ -23,11 +23,32 @@ export interface House {
   rules: string[] | null;
   max_occupancy: number;
   amenities: string[] | null;
+  score: number;
   gender_preference: GenderPreference;
   location: unknown | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// Ev üyesi tipi
+export interface HouseMember {
+  id: string;
+  user_id: string;
+  role: "owner" | "member";
+  joined_at: string;
+  profile: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+  };
+}
+
+// Kullanıcının aktif ev üyeliği
+export interface MyMembership {
+  house: House;
+  members: HouseMember[];
+  currentUserId: string;
 }
 
 // Ev oluşturma DTO

@@ -34,21 +34,16 @@ const MOCK_BILLS = [
   },
 ];
 
-// Mock data - Roommates
-const MOCK_ROOMMATES = [
-  { id: "1", name: "Sen", avatar: null, isYou: true },
-  { id: "2", name: "Can", avatar: null },
-];
-
 export default function HomeScreen() {
   const { token } = useAuthStore();
-  const { myHouse, fetchMyHouse, isLoading } = useHouseStore();
+  const { myHouse, members, currentUserId, fetchMyMembership, isLoading } =
+    useHouseStore();
   const { pendingCount, fetchPendingCount } = useRequestStore();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (token) {
-      fetchMyHouse(token);
+      fetchMyMembership(token);
       fetchPendingCount(token);
     }
   }, [token]);
@@ -56,7 +51,7 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     if (token) {
-      await Promise.all([fetchMyHouse(token), fetchPendingCount(token)]);
+      await Promise.all([fetchMyMembership(token), fetchPendingCount(token)]);
     }
     setRefreshing(false);
   };
@@ -144,7 +139,7 @@ export default function HomeScreen() {
             <View className="w-36 h-36 rounded-full border-8 border-success/20 items-center justify-center">
               <View className="w-28 h-28 rounded-full border-8 border-success items-center justify-center">
                 <AppText className="text-5xl font-black text-success">
-                  8.5
+                  {myHouse?.score}
                 </AppText>
                 <AppText className="text-secondary">/10</AppText>
               </View>
@@ -216,26 +211,27 @@ export default function HomeScreen() {
             Ev Arkadaşları
           </AppText>
           <View className="flex-row">
-            {MOCK_ROOMMATES.map((roommate) => (
-              <View key={roommate.id} className="items-center mr-4">
-                <View
-                  className={`w-14 h-14 rounded-full items-center justify-center ${
-                    roommate.isYou
-                      ? "bg-tint"
-                      : "bg-card border-2 border-quaternary"
-                  }`}
-                >
-                  <Ionicons
-                    name="person"
-                    size={24}
-                    color={roommate.isYou ? "#FFFFFF" : "#5E43F3"}
-                  />
+            {members.map((member) => {
+              const isYou = member.user_id === currentUserId;
+              return (
+                <View key={member.id} className="items-center mr-4">
+                  <View
+                    className={`w-14 h-14 rounded-full items-center justify-center ${
+                      isYou ? "bg-tint" : "bg-card border-2 border-quaternary"
+                    }`}
+                  >
+                    <Ionicons
+                      name="person"
+                      size={24}
+                      color={isYou ? "#FFFFFF" : "#5E43F3"}
+                    />
+                  </View>
+                  <AppText className="text-sm text-secondary mt-1">
+                    {isYou ? "Ben" : member.profile.full_name}
+                  </AppText>
                 </View>
-                <AppText className="text-sm text-secondary mt-1">
-                  {roommate.name}
-                </AppText>
-              </View>
-            ))}
+              );
+            })}
             <TouchableOpacity className="items-center">
               <View className="w-14 h-14 rounded-full border-2 border-dashed border-quaternary items-center justify-center">
                 <Ionicons name="add" size={24} color="#12121E4D" />

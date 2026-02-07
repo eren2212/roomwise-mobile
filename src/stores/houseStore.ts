@@ -4,18 +4,22 @@ import {
   CreateHouseDto,
   UpdateHouseDto,
   SelectedImage,
+  HouseMember,
 } from "../types/house.types";
 import houseService from "../services/house.service";
 
 interface HouseState {
   // State
   myHouse: House | null;
+  members: HouseMember[];
+  currentUserId: string | null;
   houses: House[];
   selectedHouse: House | null;
   isLoading: boolean;
   error: string | null;
 
   // Actions
+  fetchMyMembership: (token: string) => Promise<void>;
   fetchMyHouse: (token: string) => Promise<void>;
   fetchHouses: (token: string) => Promise<void>;
   fetchHouseById: (houseId: string) => Promise<void>;
@@ -38,12 +42,44 @@ interface HouseState {
 export const useHouseStore = create<HouseState>((set, get) => ({
   // Initial state
   myHouse: null,
+  members: [],
+  currentUserId: null,
   houses: [],
   selectedHouse: null,
   isLoading: false,
   error: null,
 
-  // Kullanıcının evini getir
+  // Kullanıcının aktif ev üyeliğini ve ev arkadaşlarını getir
+  fetchMyMembership: async (token: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await houseService.getMyMembership(token);
+      if (response.data) {
+        set({
+          myHouse: response.data.house,
+          members: response.data.members,
+          currentUserId: response.data.currentUserId,
+          isLoading: false,
+        });
+      } else {
+        set({
+          myHouse: null,
+          members: [],
+          currentUserId: null,
+          isLoading: false,
+        });
+      }
+    } catch (error: any) {
+      set({
+        error: error.message || "Ev üyeliği alınamadı",
+        isLoading: false,
+        myHouse: null,
+        members: [],
+      });
+    }
+  },
+
+  // Kullanıcının kendi oluşturduğu evleri getir (eski fonksiyon - listing için)
   fetchMyHouse: async (token: string) => {
     set({ isLoading: true, error: null });
     try {
@@ -157,6 +193,8 @@ export const useHouseStore = create<HouseState>((set, get) => ({
   reset: () => {
     set({
       myHouse: null,
+      members: [],
+      currentUserId: null,
       houses: [],
       selectedHouse: null,
       isLoading: false,

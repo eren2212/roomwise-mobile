@@ -5,6 +5,7 @@ import {
   UpdateHouseDto,
   HouseApiResponse,
   SelectedImage,
+  MyMembership,
 } from "../types/house.types";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -112,6 +113,20 @@ class HouseService {
    */
   async getHouseById(houseId: string): Promise<HouseApiResponse<House>> {
     const response = await api.get(`/houses/${houseId}`);
+    return response.data;
+  }
+
+  /**
+   * Kullanıcının aktif ev üyeliğini ve ev arkadaşlarını getir
+   */
+  async getMyMembership(
+    token: string,
+  ): Promise<HouseApiResponse<MyMembership | null>> {
+    const response = await api.get("/houses/me/membership", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   }
 
