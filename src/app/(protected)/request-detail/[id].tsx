@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   ScrollView,
@@ -14,6 +14,7 @@ import { AppText } from "@/components/AppText";
 import { useAuthStore } from "@/stores/authStore";
 import { useHouseStore } from "@/stores/houseStore";
 import { useRequestStore } from "@/stores/requestStore";
+import { useChatStore } from "@/stores/chatStore";
 import COLORS from "@/theme/color";
 
 export default function RequestDetailScreen() {
@@ -22,6 +23,8 @@ export default function RequestDetailScreen() {
   const { myHouse } = useHouseStore();
   const { selectedRequest, fetchRequestById, updateRequestStatus, isLoading } =
     useRequestStore();
+  const { createDirectConversation } = useChatStore();
+  const [isStartingChat, setIsStartingChat] = useState(false);
 
   useEffect(() => {
     if (id && token) {
@@ -54,6 +57,26 @@ export default function RequestDetailScreen() {
       month: "long",
       year: "numeric",
     });
+  };
+
+  // Sohbet başlat
+  const handleStartChat = async () => {
+    if (!selectedRequest?.user_id) {
+      Alert.alert("Hata", "Kullanıcı bilgisi bulunamadı");
+      return;
+    }
+
+    setIsStartingChat(true);
+    try {
+      const conversation = await createDirectConversation(
+        selectedRequest.user_id,
+      );
+      setIsStartingChat(false);
+      router.push(`/chat/${conversation.id}`);
+    } catch (error: any) {
+      setIsStartingChat(false);
+      Alert.alert("Hata", error.message || "Sohbet başlatılamadı");
+    }
   };
 
   // İstek durumunu güncelle
@@ -197,12 +220,20 @@ export default function RequestDetailScreen() {
       {/* Bottom Action Bar */}
       <View className="absolute bottom-0 left-0 right-0 bg-background border-t border-quaternary px-4 py-4 pb-8 flex-row items-center">
         {/* Message Button */}
-        <TouchableOpacity className="w-14 h-14 bg-card rounded-2xl items-center justify-center border border-quaternary mr-3">
-          <Ionicons
-            name="chatbubble-outline"
-            size={24}
-            color={COLORS.primary}
-          />
+        <TouchableOpacity
+          onPress={handleStartChat}
+          disabled={isStartingChat}
+          className="w-14 h-14 bg-card rounded-2xl items-center justify-center border border-quaternary mr-3"
+        >
+          {isStartingChat ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <Ionicons
+              name="chatbubble-outline"
+              size={24}
+              color={COLORS.primary}
+            />
+          )}
         </TouchableOpacity>
 
         {/* Decline Button */}

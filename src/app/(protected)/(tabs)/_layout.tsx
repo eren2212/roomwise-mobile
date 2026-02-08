@@ -1,16 +1,21 @@
-import { useColorScheme } from "react-native";
+import { useColorScheme, View, Text } from "react-native";
 import {
   NativeTabs,
   Icon,
   Label,
   VectorIcon,
+  Badge,
 } from "expo-router/unstable-native-tabs";
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import COLORS from "@/theme/color";
+import { useChatStore } from "@/stores/chatStore";
 
 export default function TabLayout() {
   const scheme = useColorScheme(); // "dark" | "light" | null
+
+  const { getUnreadCount } = useChatStore();
+  const unreadCount = getUnreadCount();
 
   const tabColor = scheme === "dark" ? "white" : "black";
 
@@ -21,54 +26,37 @@ export default function TabLayout() {
       }}
       tintColor={tabColor}
     >
-      <NativeTabs.Trigger name="index" >
+      <NativeTabs.Trigger name="index">
         <Label hidden />
-        <Icon
-          src={
-            <VectorIcon
-              family={MaterialIcons}
-              name="swipe"
-            />
-          }
-        />
+        <Icon src={<VectorIcon family={MaterialIcons} name="swipe" />} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="search">
         <Label hidden />
         <Icon
-          sf={{ default: "magnifyingglass", selected: "magnifyingglass" }} drawable="search_drawable"
+          sf={{ default: "magnifyingglass", selected: "magnifyingglass" }}
+          drawable="search_drawable"
         />
       </NativeTabs.Trigger>
 
-      
       <NativeTabs.Trigger name="home">
         <Label hidden />
-        <Icon sf={{ default: "house.fill", selected: "house.fill" }} drawable="home_drawable" />
+        <Icon
+          sf={{ default: "house.fill", selected: "house.fill" }}
+          drawable="home_drawable"
+        />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="chat">
+        {unreadCount > 0 && <Badge>{unreadCount.toString()}</Badge>}
         <Label hidden />
-        <Icon
-          src={<VectorIcon
-            family={MaterialIcons}
-            name="chat-bubble"
-          />}
-        />
+        <Icon src={<VectorIcon family={MaterialIcons} name="chat-bubble" />} />
       </NativeTabs.Trigger>
 
-      
       <NativeTabs.Trigger name="profile">
         <Label hidden />
-        <Icon
-          src={
-            <VectorIcon
-              family={FontAwesome5}
-              name="user-alt"
-            />
-          }
-        />
+        <Icon src={<VectorIcon family={FontAwesome5} name="user-alt" />} />
       </NativeTabs.Trigger>
-
     </NativeTabs>
   );
 }

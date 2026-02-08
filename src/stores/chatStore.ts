@@ -18,6 +18,8 @@ interface ChatStore extends ChatState {
   setActiveConversation: (conversationId: string | null) => void;
   markAsRead: (conversationId: string) => Promise<void>;
   createDirectConversation: (targetUserId: string) => Promise<Conversation>;
+  createGroupConversation: (houseId: string) => Promise<Conversation>;
+  getHouseConversation: (houseId: string) => Promise<Conversation>;
   subscribeToMessages: (conversationId: string) => RealtimeChannel;
   unsubscribeFromMessages: (channel: RealtimeChannel) => void;
   subscribeToConversations: () => RealtimeChannel;
@@ -27,6 +29,7 @@ interface ChatStore extends ChatState {
     content: string,
     senderId: string,
   ) => void;
+  getUnreadCount: () => number;
   setError: (error: string | null) => void;
   clearError: () => void;
   reset: () => void;
@@ -102,6 +105,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         content,
         message.sender_id,
       );
+      // Kendi mesajını gönderdiğinde otomatik okundu olarak işaretle
+      await get().markAsRead(conversationId);
     } catch (error: any) {
       set({ error: error.message || "Mesaj gönderilemedi" });
       throw error;
@@ -178,6 +183,53 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     } catch (error: any) {
       set({
         error: error.message || "Konuşma oluşturulamadı",
+        isLoading: false,
+      });
+      throw error;
+    }
+  },
+
+  // Ev için grup konuşması oluştur
+  createGroupConversation: async (houseId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const token = useAuthStore.getState().token;
+      if (!token) throw new Error("Token bulunamadı");
+      const conversation = await chatService.createGroupConversation(
+        houseId,
+        token,
+      );
+      const { conversations } = get();
+      // Zaten listede yoksa ekle
+      if (!conversations.find((c) => c.id === conversation.id)) {
+        set({ conversations: [conversation, ...conversations] });
+      }
+      set({ isLoading: false });
+      return conversation;
+    } catch (error: any) {
+      set({
+        error: error.message || "Grup konuşması oluşturulamadı",
+        isLoading: false,
+      });
+      throw error;
+    }
+  },
+
+  // Ev için grup konuşmasını getir
+  getHouseConversation: async (houseId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const token = useAuthStore.getState().token;
+      if (!token) throw new Error("Token bulunamadı");
+      const conversation = await chatService.getHouseConversation(
+        houseId,
+        token,
+      );
+      set({ isLoading: false });
+      return conversation;
+    } catch (error: any) {
+      set({
+        error: error.message || "Grup konuşması getirilemedi",
         isLoading: false,
       });
       throw error;
@@ -295,6 +347,31 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           : conv,
       ),
     });
+  },
+
+  // Okunmamış mesaj sayısını hesapla
+  getUnreadCount: () => {
+    const { conversations } = get();
+    const currentUserId = useAuthStore.getState().user?.id;
+
+    if (!currentUserId) return 0;
+
+    return conversations.filter((conv) => {
+      // Son mesaj varsa ve kullanıcının okuduğu zamandan sonraysa
+      if (!conv.last_message_at) return false;
+
+      // Kullanıcının bu konuşmadaki participant bilgisini bul
+      const userParticipant = conv.conversation_participants?.find(
+        (p) => p.user_id === currentUserId,
+      );
+
+      if (!userParticipant?.last_read_at) return true; // Hiç okunmamış
+
+      // Son mesaj, son okunma zamanından sonra mı?
+      return (
+        new Date(conv.last_message_at) > new Date(userParticipant.last_read_at)
+      );
+    }).length;
   },
 
   // Hata ayarla

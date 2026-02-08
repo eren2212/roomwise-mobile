@@ -104,6 +104,43 @@ const chatService = {
     );
     return response.data.data;
   },
+
+  /**
+   * Ev için grup konuşması oluştur
+   */
+  async createGroupConversation(
+    houseId: string,
+    token: string,
+  ): Promise<Conversation> {
+    const response = await api.post<ChatApiResponse<Conversation>>(
+      "/chat/conversations/group",
+      { houseId },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Ev için grup konuşmasını getir
+   */
+  async getHouseConversation(
+    houseId: string,
+    token: string,
+  ): Promise<Conversation> {
+    const response = await api.get<ChatApiResponse<Conversation>>(
+      `/chat/conversations/house/${houseId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    return response.data.data;
+  },
 };
 
 export default chatService;

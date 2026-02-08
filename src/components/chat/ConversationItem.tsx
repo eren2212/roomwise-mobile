@@ -90,13 +90,13 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
     >
       {/* Avatar */}
       <View className="relative">
-        {avatarUrl ? (
+        {avatarUrl && displayName !== "Grup Sohbeti" ? (
           <Image
             source={{ uri: getAvatarUrl()! }}
             className="w-14 h-14 rounded-full bg-gray-200"
           />
         ) : (
-          <View className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 items-center justify-center">
+          <View className="w-14 h-14 rounded-full bg-gradient-to-br bg-secondary items-center justify-center">
             <Text className="text-white text-xl font-bold">
               {displayName.charAt(0).toUpperCase()}
             </Text>

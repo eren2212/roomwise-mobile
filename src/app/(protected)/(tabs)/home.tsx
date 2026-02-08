@@ -13,6 +13,7 @@ import { Button } from "@/components/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { useHouseStore } from "@/stores/houseStore";
 import { useRequestStore } from "@/stores/requestStore";
+import { useChatStore } from "@/stores/chatStore";
 
 // Mock data - Split Bills
 const MOCK_BILLS = [
@@ -39,7 +40,11 @@ export default function HomeScreen() {
   const { myHouse, members, currentUserId, fetchMyMembership, isLoading } =
     useHouseStore();
   const { pendingCount, fetchPendingCount } = useRequestStore();
+  const { createGroupConversation, getUnreadCount } = useChatStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [isStartingChat, setIsStartingChat] = useState(false);
+
+  const unreadChatCount = getUnreadCount();
 
   useEffect(() => {
     if (token) {
@@ -54,6 +59,21 @@ export default function HomeScreen() {
       await Promise.all([fetchMyMembership(token), fetchPendingCount(token)]);
     }
     setRefreshing(false);
+  };
+
+  // Ev grup sohbetine git
+  const handleHouseChat = async () => {
+    if (!myHouse?.id) return;
+
+    setIsStartingChat(true);
+    try {
+      const conversation = await createGroupConversation(myHouse.id);
+      router.push(`/chat/${conversation.id}`);
+    } catch (error) {
+      console.error("Grup sohbeti açılamadı:", error);
+    } finally {
+      setIsStartingChat(false);
+    }
   };
 
   // Ev yoksa - İlan oluştur ekranı
@@ -103,6 +123,25 @@ export default function HomeScreen() {
             <AppText className="text-secondary">Ev Yönetim Paneli</AppText>
           </View>
           <View className="flex-row">
+            <TouchableOpacity
+              onPress={handleHouseChat}
+              disabled={isStartingChat}
+              className="w-10 h-10 bg-card rounded-full items-center justify-center mr-2 relative"
+            >
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={22}
+                color="#12121E"
+              />
+              {/* Okunmamış mesaj badge */}
+              {unreadChatCount > 0 && (
+                <View className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-error rounded-full items-center justify-center px-1">
+                  <AppText className="text-white text-xs font-bold">
+                    {unreadChatCount > 99 ? "99+" : unreadChatCount}
+                  </AppText>
+                </View>
+              )}
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push("/(protected)/house/edit-house")}
               className="w-10 h-10 bg-card rounded-full items-center justify-center mr-2"

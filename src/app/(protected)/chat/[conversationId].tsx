@@ -106,7 +106,10 @@ export default function ChatScreen() {
     );
   };
 
-  const displayName = otherParticipant?.profiles?.full_name || "Sohbet";
+  const displayName =
+    conversation?.type === "group"
+      ? "Grup Sohbeti"
+      : otherParticipant?.profiles?.full_name || "Sohbet";
   const avatarUrl = otherParticipant?.profiles?.avatar_url;
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -129,13 +132,13 @@ export default function ChatScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity className="flex-row items-center flex-1 ml-2">
-          {avatarUrl ? (
+          {avatarUrl && displayName !== "Grup Sohbeti" ? (
             <Image
               source={{ uri: getAvatarUrl()! }}
               className="w-10 h-10 rounded-full bg-gray-200"
             />
           ) : (
-            <View className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 items-center justify-center">
+            <View className="w-10 h-10 rounded-full bg-gradient-to-br bg-secondary items-center justify-center">
               <AppText className="text-white font-bold">
                 {displayName.charAt(0).toUpperCase()}
               </AppText>
