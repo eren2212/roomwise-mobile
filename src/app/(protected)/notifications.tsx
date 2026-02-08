@@ -139,7 +139,7 @@ export default function NotificationsScreen() {
       >
         {isLoading && !refreshing ? (
           <View className="items-center py-8">
-            <ActivityIndicator size="large" color={COLORS.tint} />
+            <ActivityIndicator size="large" color={COLORS.primary} />
           </View>
         ) : pendingRequests.length === 0 ? (
           <View className="items-center py-12">
